@@ -51,9 +51,7 @@ class MainActivity : Activity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 applyTvZoom(view)
                 super.onPageFinished(view, url)
-                val handler = Handler(Looper.getMainLooper())
-                handler.postDelayed({ applyTvZoom(webView) }, 1500)
-                handler.postDelayed({ applyTvZoom(webView) }, 3000)
+                scheduleDelayedZoom()
             }
         }
         webView.webChromeClient = WebChromeClient()
@@ -178,6 +176,9 @@ class MainActivity : Activity() {
                             .apply()
                         if (!config.url.isNullOrBlank() && config.url != currentSaved) {
                             showWebView(config.url)
+                        } else if (webView.visibility == View.VISIBLE) {
+                            applyTvZoom(webView)
+                            scheduleDelayedZoom()
                         }
                     } else {
                         updatePollingStatus(success, timestamp)
@@ -266,9 +267,16 @@ class MainActivity : Activity() {
     private fun getJsZoom(): String? =
         getPrefs().getString(KEY_JS_ZOOM, null)?.takeIf { it.isNotBlank() }
 
+    private fun scheduleDelayedZoom() {
+        val handler = Handler(Looper.getMainLooper())
+        handler.postDelayed({ applyTvZoom(webView) }, 1500)
+        handler.postDelayed({ applyTvZoom(webView) }, 3000)
+    }
+
     /** Applies the TV zoom script from API (jsZoom) or default. */
     private fun applyTvZoom(view: WebView?) {
-        val script = getJsZoom() ?: DEFAULT_JS_ZOOM
+        val raw = getJsZoom() ?: DEFAULT_JS_ZOOM
+        val script = if (raw.startsWith("javascript:", ignoreCase = true)) raw else "javascript:$raw"
         view?.loadUrl(script)
     }
 
